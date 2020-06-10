@@ -42,6 +42,7 @@ set_session(tf.Session(config=config))
 
 
 if __name__ == '__main__':
+    # classes_path = 'data/voc_classes.txt'
     classes_path = 'data/coco_classes.txt'
     # model_path可以是'yolov4.h5'、'./weights/step00001000.h5'这些。
     # model_path = 'yolov4.h5'
@@ -71,11 +72,19 @@ if __name__ == '__main__':
     _decode = Decode(conf_thresh, nms_thresh, input_shape, yolo, all_classes)
 
 
+    path_dir = os.listdir('images/test')
+    # warm up
+    if use_gpu:
+        for k, filename in enumerate(path_dir):
+            image = cv2.imread('images/test/' + filename)
+            image, boxes, scores, classes = _decode.detect_image(image, draw_image=False)
+            if k == 10:
+                break
+
+
     time_stat = deque(maxlen=20)
     start_time = time.time()
     end_time = time.time()
-
-    path_dir = os.listdir('images/test')
     num_imgs = len(path_dir)
     start = time.time()
     for k, filename in enumerate(path_dir):
@@ -96,6 +105,6 @@ if __name__ == '__main__':
             logger.info("Detection bbox results save in images/res/{}".format(filename))
     cost = time.time() - start
     logger.info('total time: {0:.6f}s'.format(cost))
-    logger.info('Speed: {0:.6f}s per image'.format(cost / num_imgs))
+    logger.info('Speed: %.6fs per image,  %.1f FPS.'%((cost / num_imgs), (num_imgs / cost)))
 
 

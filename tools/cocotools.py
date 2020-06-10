@@ -15,7 +15,22 @@ import shutil
 import logging
 logger = logging.getLogger(__name__)
 
-clsid2catid = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11, 11: 13, 12: 14, 13: 15, 14: 16, 15: 17, 16: 18, 17: 19, 18: 20, 19: 21, 20: 22, 21: 23, 22: 24, 23: 25, 24: 27, 25: 28, 26: 31, 27: 32, 28: 33, 29: 34, 30: 35, 31: 36, 32: 37, 33: 38, 34: 39, 35: 40, 36: 41, 37: 42, 38: 43, 39: 44, 40: 46, 41: 47, 42: 48, 43: 49, 44: 50, 45: 51, 46: 52, 47: 53, 48: 54, 49: 55, 50: 56, 51: 57, 52: 58, 53: 59, 54: 60, 55: 61, 56: 62, 57: 63, 58: 64, 59: 65, 60: 67, 61: 70, 62: 72, 63: 73, 64: 74, 65: 75, 66: 76, 67: 77, 68: 78, 69: 79, 70: 80, 71: 81, 72: 82, 73: 84, 74: 85, 75: 86, 76: 87, 77: 88, 78: 89, 79: 90}
+
+clsid2catid = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11, 11: 13, 12: 14, 13: 15, 14: 16,
+               15: 17, 16: 18, 17: 19, 18: 20, 19: 21, 20: 22, 21: 23, 22: 24, 23: 25, 24: 27, 25: 28, 26: 31,
+               27: 32, 28: 33, 29: 34, 30: 35, 31: 36, 32: 37, 33: 38, 34: 39, 35: 40, 36: 41, 37: 42, 38: 43,
+               39: 44, 40: 46, 41: 47, 42: 48, 43: 49, 44: 50, 45: 51, 46: 52, 47: 53, 48: 54, 49: 55, 50: 56,
+               51: 57, 52: 58, 53: 59, 54: 60, 55: 61, 56: 62, 57: 63, 58: 64, 59: 65, 60: 67, 61: 70, 62: 72,
+               63: 73, 64: 74, 65: 75, 66: 76, 67: 77, 68: 78, 69: 79, 70: 80, 71: 81, 72: 82, 73: 84, 74: 85,
+               75: 86, 76: 87, 77: 88, 78: 89, 79: 90}
+
+catid2clsid = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9, 11: 10, 13: 11, 14: 12, 15: 13, 16: 14,
+               17: 15, 18: 16, 19: 17, 20: 18, 21: 19, 22: 20, 23: 21, 24: 22, 25: 23, 27: 24, 28: 25, 31: 26,
+               32: 27, 33: 28, 34: 29, 35: 30, 36: 31, 37: 32, 38: 33, 39: 34, 40: 35, 41: 36, 42: 37, 43: 38,
+               44: 39, 46: 40, 47: 41, 48: 42, 49: 43, 50: 44, 51: 45, 52: 46, 53: 47, 54: 48, 55: 49, 56: 50,
+               57: 51, 58: 52, 59: 53, 60: 54, 61: 55, 62: 56, 63: 57, 64: 58, 65: 59, 67: 60, 70: 61, 72: 62,
+               73: 63, 74: 64, 75: 65, 76: 66, 77: 67, 78: 68, 79: 69, 80: 70, 81: 71, 82: 72, 84: 73, 85: 74,
+               86: 75, 87: 76, 88: 77, 89: 78, 90: 79}
 
 def get_classes(classes_path):
     with open(classes_path) as f:
@@ -79,7 +94,7 @@ def bbox_eval(anno_file):
     sys.stdout.flush()
     return map_stats
 
-def eval(_decode, images, eval_pre_path, anno_file, eval_batch_size, draw_image):
+def eval(_decode, images, eval_pre_path, anno_file, eval_batch_size, _clsid2catid, draw_image):
     # 8G内存的电脑并不能装下所有结果，所以把结果写进文件里。
     if os.path.exists('eval_results/bbox/'): shutil.rmtree('eval_results/bbox/')
     if draw_image:
@@ -92,6 +107,7 @@ def eval(_decode, images, eval_pre_path, anno_file, eval_batch_size, draw_image)
     count = 0
     n = len(images)
     batch_im_id = []
+    batch_im_name = []
     batch_img = []
     for i, im in enumerate(images):
         im_id = im['id']
@@ -99,8 +115,10 @@ def eval(_decode, images, eval_pre_path, anno_file, eval_batch_size, draw_image)
         image = cv2.imread(eval_pre_path + file_name)
         if i % eval_batch_size == 0:
             batch_im_id = []
+            batch_im_name = []
             batch_img = []
         batch_im_id.append(im_id)
+        batch_im_name.append(file_name)
         batch_img.append(image)
 
         # 收集够一个batch的图片
@@ -112,13 +130,14 @@ def eval(_decode, images, eval_pre_path, anno_file, eval_batch_size, draw_image)
         for image, boxes, scores, classes in zip(result_image, result_boxes, result_scores, result_classes):
             if boxes is not None:
                 im_id = batch_im_id[k]
+                im_name = batch_im_name[k]
                 n = len(boxes)
                 bbox_data = []
                 for p in range(n):
                     clsid = classes[p]
                     score = scores[p]
                     xmin, ymin, xmax, ymax = boxes[p]
-                    catid = (clsid2catid[int(clsid)])
+                    catid = (_clsid2catid[int(clsid)])
                     w = xmax - xmin + 1
                     h = ymax - ymin + 1
 
@@ -132,9 +151,9 @@ def eval(_decode, images, eval_pre_path, anno_file, eval_batch_size, draw_image)
                         'score': float(score)
                     }
                     bbox_data.append(bbox_res)
-                path = 'eval_results/bbox/%.12d.json' % im_id
+                path = 'eval_results/bbox/%s.json' % im_name.split('.')[0]
                 if draw_image:
-                    cv2.imwrite('eval_results/images/%.12d.jpg' % im_id, image)
+                    cv2.imwrite('eval_results/images/%s' % im_name, image)
                 with open(path, 'w') as f:
                     json.dump(bbox_data, f)
             count += 1
@@ -146,7 +165,7 @@ def eval(_decode, images, eval_pre_path, anno_file, eval_batch_size, draw_image)
     return box_ap_stats
 
 
-def test_dev(_decode, images, test_pre_path, anno_file, test_batch_size, draw_image):
+def test_dev(_decode, images, test_pre_path, test_batch_size, draw_image):
     # 8G内存的电脑并不能装下所有结果，所以把结果写进文件里。
     if os.path.exists('results/bbox/'): shutil.rmtree('results/bbox/')
     if draw_image:
